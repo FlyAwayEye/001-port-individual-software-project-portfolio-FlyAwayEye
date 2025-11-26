@@ -1,0 +1,39 @@
+name: Build and attach Release (Windows exe)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag for release (e.g. v1.0.0). Required for manual dispatch.'
+        required: true
+        default: ''
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Publish self-contained single-file (win-x64)
+        run: dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o publish
+
+      - name: Create or update GitHub Release and upload exe
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.event_name == 'push' && github.ref_name || github.event.inputs.release_tag }}
+          name: Release ${{ github.event_name == 'push' && github.ref_name || github.event.inputs.release_tag }}
+          files: publish/**/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

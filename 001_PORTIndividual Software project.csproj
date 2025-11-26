@@ -8,4 +8,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include=".github\workflows\publish-release.yml" />
+  </ItemGroup>
+
 </Project>
