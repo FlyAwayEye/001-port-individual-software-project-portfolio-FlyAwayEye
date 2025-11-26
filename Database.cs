@@ -16,16 +16,28 @@ public sealed class Database
     /// <summary>
     /// Initializes the on-disk storage if required. Currently ensures the users file exists.
     /// The files are stored in the application's base directory (usually bin/.../net8.0 at runtime).
+    /// On first run (no users present) three default accounts are created to avoid lockout.
     /// </summary>
     public void Initialize()
     {
-        var path = GetFilePath(UsersFileName);
         lock (_fileLock)
         {
-            if (!File.Exists(path))
+            // Load existing users (returns empty list if file missing/invalid)
+            var users = LoadUsersInternal();
+
+            if (users.Count == 0)
             {
-                // Create an empty JSON array so the file is a valid text file from the start.
-                File.WriteAllText(path, "[]");
+                // Create three default users to avoid lockout on first run.
+                var defaultUsers = new List<User>
+                {
+                    User.CreateStudent("Alice", "Student", "0001"),
+                    User.CreatePersonalSupervisor("Paul", "Supervisor", "0002"),
+                    User.CreateSeniorTutor("Sam", "Senior", "0003")
+                };
+
+                // Ensure the same sort order used elsewhere.
+                SortUsers(defaultUsers);
+                SaveUsersInternal(defaultUsers);
             }
         }
     }
