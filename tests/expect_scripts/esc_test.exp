@@ -1,7 +1,7 @@
 #!/usr/bin/expect -f
 # ESC test: spawn the published app and send an Escape key; expect the program to exit and print "Exiting..." within ~1s.
-
 # Usage: esc_test.exp <path-to-published-target>
+
 set timeout 3
 
 if { $argc < 1 } {
@@ -12,12 +12,11 @@ set target [lindex $argv 0]
 
 # Decide how to spawn: if target ends with .dll, run 'dotnet <dll>'; otherwise run the executable directly.
 if {[string match "*.dll" $target]} {
-    set spawn_cmd "dotnet"
-    set spawn_arg $target
-    spawn -- $spawn_cmd $spawn_arg
+    # spawn command and argument without using "--"
+    spawn dotnet $target
 } else {
-    # executable
-    spawn -- $target
+    # spawn executable path (even if path contains spaces, it's passed as a single argument)
+    spawn $target
 }
 
 # small delay to let the app initialize

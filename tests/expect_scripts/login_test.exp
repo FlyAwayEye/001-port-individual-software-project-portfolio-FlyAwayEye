@@ -12,9 +12,9 @@ set target [lindex $argv 0]
 
 # Decide how to spawn: if target ends with .dll, run 'dotnet <dll>'; otherwise run the executable directly.
 if {[string match "*.dll" $target]} {
-    spawn -- dotnet $target
+    spawn dotnet $target
 } else {
-    spawn -- $target
+    spawn $target
 }
 
 # Wait for the login prompt to appear (approximate matching)
