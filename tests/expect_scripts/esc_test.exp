@@ -1,0 +1,38 @@
+#!/usr/bin/expect -f
+# ESC test: spawn the app and send an Escape key; expect the program to exit and print "Exiting..." within ~1s.
+
+set timeout 3
+# Run the program via 'dotnet run' (no-build mode used by the CI job)
+spawn dotnet run --project . --no-build
+# small delay to let the app print the initial login/splash text
+sleep 0.1
+set start [clock milliseconds]
+
+# Send ASCII Escape (octal \033)
+send "\033"
+
+# Wait for either the explicit "Exiting..." string, EOF (process ended), or timeout
+expect {
+    -re "Exiting\\.\\.\\." {
+        # matched the expected message printed by ExitNow
+    }
+    eof {
+        # process exited without printing the exact message
+    }
+    timeout {
+        puts "ESC test: timeout waiting for exit message or process termination"
+        exit 1
+    }
+}
+
+set elapsed_ms [expr {[clock milliseconds] - $start}]
+set elapsed_s [expr {double($elapsed_ms) / 1000.0}]
+
+# Check that the program exited within 1 second (<= 1.0)
+if { $elapsed_s > 1.0 } {
+    puts "ESC test FAILED: program did not exit within 1s (elapsed ${elapsed_s}s)"
+    exit 1
+} else {
+    puts "ESC test PASSED: program exited in ${elapsed_s}s"
+    exit 0
+}

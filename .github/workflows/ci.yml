@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish app (to a single folder)
+        run: |
+          dotnet publish -c Release -o ./out
+
+      - name: Install expect (for interactive tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y expect
+
+      - name: Make test scripts executable
+        run: |
+          chmod +x ./tests/run_tests.sh
+          chmod +x ./tests/expect_scripts/esc_test.exp
+          chmod +x ./tests/expect_scripts/login_test.exp
+
+      - name: Run integration tests
+        run: ./tests/run_tests.sh
