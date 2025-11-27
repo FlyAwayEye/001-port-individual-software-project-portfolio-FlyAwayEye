@@ -11,6 +11,10 @@ on:
         required: true
         default: ''
 
+# Give the job permission to write repository contents (required to create releases)
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: windows-latest
@@ -27,13 +31,20 @@ jobs:
         run: dotnet restore
 
       - name: Publish self-contained single-file (win-x64)
-        run: dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o publish
+        run: |
+          $proj = "./001_PORTIndividual Software project.csproj"
+          Write-Host "Publishing project: $proj"
+          dotnet publish "$proj" -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o publish
+
+      - name: List publish folder (debug)
+        run: |
+          Write-Host "Publish folder contents:"
+          if (Test-Path publish) { Get-ChildItem -Recurse publish | ForEach-Object { Write-Host $_.FullName } } else { Write-Host "publish/ not found" }
 
       - name: Create or update GitHub Release and upload exe
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.event_name == 'push' && github.ref_name || github.event.inputs.release_tag }}
           name: Release ${{ github.event_name == 'push' && github.ref_name || github.event.inputs.release_tag }}
-          files: publish/**/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: publish/**/*.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
