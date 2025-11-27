@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  push:        # trigger on push to any branch
-  pull_request: # trigger on PRs
-  workflow_dispatch: # allows manual runs from the Actions UI
+  push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-integration-tests:
@@ -24,8 +24,9 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Publish app (to a single folder)
+        # Publish the project file (not the solution) because --output is not supported for solutions.
         run: |
-          dotnet publish -c Release -o ./out
+          dotnet publish "001_PORTIndividual Software project.csproj" -c Release -o ./out --no-build
 
       - name: Install expect (for interactive tests)
         run: |
@@ -37,6 +38,9 @@ jobs:
           chmod +x ./tests/run_tests.sh
           chmod +x ./tests/expect_scripts/esc_test.exp
           chmod +x ./tests/expect_scripts/login_test.exp
+
+      - name: List published files (debug)
+        run: ls -la ./out || true
 
       - name: Run integration tests
         run: ./tests/run_tests.sh
