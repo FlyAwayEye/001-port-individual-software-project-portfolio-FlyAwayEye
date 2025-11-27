@@ -1,12 +1,21 @@
 #!/usr/bin/expect -f
 # Login probe test: tries a sequence of common 4-digit codes and asserts that a "Welcome," line is produced.
-# This is a best-effort probe: it will pass if any of the probed codes are accepted by the app.
+# Usage: login_test.exp <path-to-published-target>
 
-set timeout 6
-# Candidate login codes to try (add or adjust values as needed for your users)
-set candidates { "0000" "0001" "1234" "0423" "1111" "9999" }
+set timeout 8
 
-spawn dotnet run --project . --no-build
+if { $argc < 1 } {
+    puts "Usage: $argv0 <published-target-path>"
+    exit 2
+}
+set target [lindex $argv 0]
+
+# Decide how to spawn: if target ends with .dll, run 'dotnet <dll>'; otherwise run the executable directly.
+if {[string match "*.dll" $target]} {
+    spawn -- dotnet $target
+} else {
+    spawn -- $target
+}
 
 # Wait for the login prompt to appear (approximate matching)
 expect {
@@ -20,11 +29,14 @@ expect {
     timeout { puts "Login test: did not see 'User ID:' prompt"; exit 1 }
 }
 
+# Candidate login codes to try (add or adjust values as needed for your users)
+set candidates { "0000" "0001" "1234" "0423" "1111" "9999" }
+
 # Try each candidate code until we see "Welcome," or until candidates exhausted
 set success 0
 foreach code $candidates {
     send -- "$code\r"
-    # after sending, the app may print "No user found with that ID. Try again." or "Welcome, Name (Type)"
+
     expect {
         -re "Welcome,.*\\(" {
             puts "Login test PASSED: accepted code $code"
@@ -35,23 +47,29 @@ foreach code $candidates {
             # try next candidate
         }
         -re "Invalid format\\. The login code must be exactly 4 digits" {
-            # not the right format -- continue trying
+            # try next candidate
+        }
+        eof {
+            # process ended unexpectedly
+            puts "Login test: process ended prematurely"
+            exit 1
         }
         timeout {
+            # timed out waiting for response - proceed to next candidate
             puts "Login test: timeout after trying $code"
-            # try next code
         }
     }
-    # ensure we see the "User ID: " prompt again before next try (some app flows might re-prompt)
+
+    # If still running, try to re-sync to "User ID:" prompt before next attempt
     expect {
         -re "User ID: " {}
-        timeout { /* do nothing; next attempt will still try to send input */ }
+        timeout {}
     }
 }
 
 if { $success == 1 } {
     exit 0
 } else {
-    puts "Login test FAILED: no candidate code accepted. To make this deterministic, add a known test user or seed users.txt in the repository for CI."
+    puts "Login test FAILED: no candidate code accepted. To make this deterministic, seed a test user or adjust candidates."
     exit 1
 }
