@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include=".github\workflows\ci.yml" />
     <None Include=".github\workflows\publish-release.yml" />
+    <None Include="tests\001_PORT.Tests\001_PORT.Tests.csproj" />
   </ItemGroup>
 
 </Project>
