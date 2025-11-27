@@ -1,0 +1,45 @@
+name: Release
+
+# Trigger on tag pushes like v1.2.3
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Ensure the workflow token can create releases & upload artifacts
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      # Build/publish a single-file Windows exe (adjust RID or flags if needed)
+      - name: Publish (win-x64 single file exe)
+        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./artifacts
+
+      - name: Show produced files
+        run: dir ./artifacts
+
+      - name: Upload artifact (executable)
+        uses: actions/upload-artifact@v4
+        with:
+          name: executable
+          path: ./artifacts/**
+
+      - name: Create GitHub Release and attach artifact
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ./artifacts/**
+          token: ${{ secrets.GITHUB_TOKEN }}
